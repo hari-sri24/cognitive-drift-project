@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from datetime import datetime
 import requests
-from streamlit_autorefresh import st_autorefresh
+import time
 
 # ================= CONFIG =================
 REFRESH_RATE = 4  # minutes
-API_URL = "http://127.0.0.1:5000/api/data"  # backend API
+API_URL = "http://127.0.0.1:5000/api/data"
 
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="Cognitive Drift Detection", page_icon="🧠", layout="wide")
@@ -46,8 +46,6 @@ if 'batch_samples' not in st.session_state:
     st.session_state.batch_samples = []
 if 'counter' not in st.session_state:
     st.session_state.counter = 0
-if 'dataset_stats' not in st.session_state:
-    st.session_state.dataset_stats = None
 
 # ================= HEADER =================
 st.markdown('<h1 class="main-header">🧠 Cognitive Drift Detection System</h1>', unsafe_allow_html=True)
@@ -56,43 +54,18 @@ st.markdown("---")
 
 # ================= SIDEBAR =================
 with st.sidebar:
-    st.markdown('<div class="sidebar-section">⚙️ Controls</div>', unsafe_allow_html=True)
     refresh_rate = st.slider("Refresh Rate (minutes)", 1, 10, REFRESH_RATE)
-    st.markdown('<div class="sidebar-section">📊 Monitor</div>', unsafe_allow_html=True)
     monitored_metric = st.selectbox("Select Metric to Monitor", ["Cognitive Score", "Reaction Time", "Memory Test Score"])
-    st.markdown('<div class="sidebar-section">📈 Chart Settings</div>', unsafe_allow_html=True)
-    show_timeline = st.checkbox("Drift Timeline", value=True)
-    show_pvalue_trend = st.checkbox("p-value Trend", value=True)
-    show_distribution = st.checkbox("Distribution Analysis", value=True)
-    show_correlations = st.checkbox("Feature Correlations", value=True)
-    show_speedometer = st.checkbox("Drift Speedometer", value=True)
-    show_anomaly = st.checkbox("Anomaly Detection", value=True)
-    show_demographics = st.checkbox("Demographic Analysis", value=True)
-
-# ================= LOAD CSV =================
-if st.session_state.dataset_stats is None:
-    df = pd.read_csv("human_cognitive_performance.csv")
-    st.session_state.dataset_stats = {
-        "total_rows": len(df),
-        "total_columns": len(df.columns),
-        "Cognitive_Score_mean": df[df.columns[0]].mean(),  # first column as numeric
-        "Age_mean": df[df.columns[5]].mean()  # adjust based on CSV
-    }
 
 # ================= BACKEND CHECK =================
 try:
     r = requests.get("http://127.0.0.1:5000/", timeout=2)
-    if r.status_code == 200:
-        st.sidebar.success("✅ Backend Connected")
-    else:
-        st.sidebar.error("❌ Backend Error")
+    if r.status_code != 200:
+        st.error("❌ Backend Error")
         st.stop()
 except:
-    st.sidebar.error("❌ Cannot connect to backend! Start backend and refresh.")
+    st.error("❌ Cannot connect to backend! Start backend first.")
     st.stop()
-
-# ================= AUTO REFRESH =================
-st_autorefresh(interval=refresh_rate*60*1000, key="datarefresh")
 
 # ================= FETCH DATA =================
 def fetch_data():
@@ -110,13 +83,11 @@ if data:
     st.session_state.counter += 1
     st.session_state.batch_samples = data['sample_data']
     
-    # convert to DataFrame
     batch_df = pd.DataFrame(st.session_state.batch_samples)
     batch_df['timestamp'] = [timestamp + pd.Timedelta(seconds=i) for i in range(len(batch_df))]
     batch_df['drift_status'] = data['drift']
     batch_df['p_value'] = data['p_value']
     
-    # append to historical
     st.session_state.historical_data = pd.concat([st.session_state.historical_data, batch_df], ignore_index=True)
     if len(st.session_state.historical_data) > 1000:
         st.session_state.historical_data = st.session_state.historical_data.tail(1000)
@@ -141,4 +112,6 @@ if data:
         drift_rate = st.session_state.historical_data['drift_status'].tail(50).mean()
         st.metric("Drift Rate (50 batches)", f"{drift_rate:.1%}")
 
-st.markdown("✅ **Dashboard updated successfully!**")
+# ================= AUTO REFRESH =================
+time.sleep(refresh_rate * 60)
+st.experimental_rerun()
