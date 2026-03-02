@@ -13,7 +13,7 @@ from pandas.plotting import autocorrelation_plot
 # Configuration
 API_URL = "http://127.0.0.1:5000/api/data"
 STATS_URL = "http://127.0.0.1:5000/api/stats"
-REFRESH_RATE = 3
+REFRESH_RATE = 4
 
 # Page config
 st.set_page_config(
@@ -25,148 +25,184 @@ st.set_page_config(
 
 # Custom CSS for DARK THEME
 st.markdown("""
-    <style>
-    /* Main background and text colors */
-    .stApp {
-        background-color: #0E1117 !important;
-        color: #FFFFFF !important;
-    }
-    
-    /* Sidebar styling */
-    .css-1d391kg, .css-1wrcr25 {
-        background-color: #1E1E1E !important;
-    }
-    
-    /* Headers */
-    h1, h2, h3, h4, h5, h6 {
-        color: #FFFFFF !important;
-    }
-    
-    /* Text color */
-    p, li, span, div {
-        color: #FFFFFF !important;
-    }
-    
-    /* Metric cards */
-    [data-testid="stMetricValue"] {
-        color: #FFFFFF !important;
-        font-size: 28px !important;
-    }
-    
-    [data-testid="stMetricLabel"] {
-        color: #AAAAAA !important;
-    }
-    
-    /* Drift status boxes */
-    .drift-box {
-        padding: 1rem;
-        border-radius: 10px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 1.2rem;
-        margin: 10px 0;
-    }
-    
-    .drift-detected {
-        background-color: #8B0000 !important;
-        color: white !important;
-        border: 2px solid #FF4444;
-    }
-    
-    .drift-stable {
-        background-color: #006400 !important;
-        color: white !important;
-        border: 2px solid #44FF44;
-    }
-    
-    /* Tabs styling */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: #1E1E1E;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        color: #FFFFFF !important;
-    }
-    
-    /* Dataframes */
-    .stDataFrame {
-        background-color: #1E1E1E !important;
-        color: #FFFFFF !important;
-    }
-    
-    /* Expanders */
-    .streamlit-expanderHeader {
-        background-color: #1E1E1E !important;
-        color: #FFFFFF !important;
-    }
-    
-    /* Sidebar text */
-    .css-17lntkn, .css-1v3fvcr {
-        color: #FFFFFF !important;
-    }
-    
-    /* Info boxes */
-    .stAlert {
-        background-color: #1E1E1E !important;
-        color: #FFFFFF !important;
-        border: 1px solid #333333;
-    }
-    
-    /* Success/Error messages */
-    .st-success, .st-error {
-        background-color: #1E1E1E !important;
-        color: #FFFFFF !important;
-    }
-    
-    /* Slider labels */
-    .stSlider label {
-        color: #FFFFFF !important;
-    }
-    
-    /* Checkbox labels */
-    .stCheckbox label {
-        color: #FFFFFF !important;
-    }
-    
-    /* Main header */
-    .main-header {
-        font-size: 3rem;
-        color: #FFFFFF !important;
-        text-align: center;
-        margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    }
-    
-    /* Metric containers */
-    .metric-card {
-        background-color: #1E1E1E;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(255,255,255,0.1);
-        border: 1px solid #333333;
-    }
-    
-    /* Plot background */
-    .js-plotly-plot {
-        background-color: #1E1E1E !important;
-    }
-    
-    /* Matplotlib figure background */
-    .stPlot {
-        background-color: #1E1E1E !important;
-    }
-    
-    /* Sidebar section headers */
-    .sidebar-section {
-        color: #FFFFFF !important;
-        font-weight: bold;
-        font-size: 1.2rem;
-        margin-top: 20px;
-        border-bottom: 1px solid #333333;
-        padding-bottom: 5px;
-    }
-    </style>
+<style>
+
+/* ================= MAIN APP ================= */
+.stApp {
+    background-color: #0E1117 !important;
+    color: #FFFFFF !important;
+}
+
+/* ================= SIDEBAR ================= */
+section[data-testid="stSidebar"] {
+    background-color: #000000 !important;
+}
+section[data-testid="stSidebar"] * {
+    color: #FFFFFF !important;
+}
+
+/* Remove white header strip */
+header[data-testid="stHeader"],
+div[data-testid="stToolbar"] {
+    background-color: #000000 !important;
+}
+
+/* ================= TEXT ================= */
+h1, h2, h3, h4, h5, h6,
+p, li, span, div {
+    color: #FFFFFF !important;
+}
+
+/* ================= METRICS ================= */
+[data-testid="stMetricValue"] {
+    color: #FFFFFF !important;
+    font-size: 28px !important;
+}
+[data-testid="stMetricLabel"] {
+    color: #AAAAAA !important;
+}
+
+/* ================= DRIFT STATUS ================= */
+.drift-box {
+    padding: 1rem;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin: 10px 0;
+}
+.drift-detected {
+    background-color: #8B0000 !important;
+    color: white !important;
+    border: 2px solid #FF4444;
+}
+.drift-stable {
+    background-color: #006400 !important;
+    color: white !important;
+    border: 2px solid #44FF44;
+}
+
+/* ================= TABS ================= */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: #1E1E1E;
+}
+.stTabs [data-baseweb="tab"] {
+    color: #FFFFFF !important;
+}
+
+/* ================= DATAFRAME ================= */
+.stDataFrame {
+    background-color: #1E1E1E !important;
+    color: #FFFFFF !important;
+}
+
+/* ================= EXPANDER ================= */
+.streamlit-expanderHeader {
+    background-color: #1E1E1E !important;
+    color: #FFFFFF !important;
+}
+
+/* ================= ALERTS ================= */
+.stAlert {
+    background-color: #1E1E1E !important;
+    color: #FFFFFF !important;
+    border: 1px solid #333333;
+}
+
+/* ================= SUCCESS / ERROR ================= */
+.st-success, .st-error {
+    background-color: #1E1E1E !important;
+    color: #FFFFFF !important;
+}
+
+/* ================= SLIDER & CHECKBOX ================= */
+.stSlider label,
+.stCheckbox label {
+    color: #FFFFFF !important;
+}
+
+/* ================= CUSTOM HEADER ================= */
+.main-header {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+/* ================= METRIC CARD ================= */
+.metric-card {
+    background-color: #1E1E1E;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+    border: 1px solid #333333;
+}
+
+/* ================= PLOTS ================= */
+.js-plotly-plot,
+.stPlot {
+    background-color: #1E1E1E !important;
+}
+
+/* ================= SIDEBAR SECTION HEADER ================= */
+.sidebar-section {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-top: 20px;
+    border-bottom: 1px solid #333333;
+    padding-bottom: 5px;
+}
+
+/* ================= INPUT COMPONENTS FIX ================= */
+
+/* Select box */
+div[data-baseweb="select"] > div {
+    background-color: #1E1E1E !important;
+    color: white !important;
+    border: 1px solid #333333 !important;
+}
+
+/* Dropdown popover + menu */
+div[data-baseweb="popover"],
+div[data-baseweb="menu"],
+ul[data-baseweb="menu"] {
+    background-color: #1E1E1E !important;
+    color: white !important;
+}
+
+/* Dropdown options */
+li[role="option"] {
+    background-color: #1E1E1E !important;
+    color: white !important;
+}
+li[role="option"]:hover {
+    background-color: #333333 !important;
+}
+
+/* Buttons */
+.stButton > button {
+    background-color: #1E1E1E !important;
+    color: white !important;
+    border: 1px solid #333333 !important;
+}
+.stButton > button:hover {
+    background-color: #2A2A2A !important;
+}
+
+/* Remove yellow selection highlight */
+::selection {
+    background: #333333 !important;
+    color: white !important;
+}
+
+/* Remove white focus glow */
+div[data-baseweb="select"] *:focus {
+    box-shadow: none !important;
+}
+
+</style>
 """, unsafe_allow_html=True)
+
 
 # Initialize session state
 if 'historical_data' not in st.session_state:
@@ -188,7 +224,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section">⚙️ Controls</div>', unsafe_allow_html=True)
     
     # Refresh rate control
-    refresh_rate = st.slider("Refresh Rate (seconds)", min_value=1, max_value=10, value=REFRESH_RATE)
+    refresh_rate = st.slider("Refresh Rate (minutes)", min_value=1, max_value=10, value=REFRESH_RATE)
     
     # Metric selection
     st.markdown('<div class="sidebar-section">📊 Monitor</div>', unsafe_allow_html=True)
@@ -213,7 +249,7 @@ with st.sidebar:
     # Fetch dataset stats
     if st.session_state.dataset_stats is None:
         try:
-            response = requests.get(STATS_URL, timeout=2)
+            response = requests.get(STATS_URL, timeout=120)
             if response.status_code == 200:
                 st.session_state.dataset_stats = response.json()
         except:
@@ -609,8 +645,7 @@ while True:
                     st.dataframe(df_display, use_container_width=True)
     
     time.sleep(refresh_rate)
-
-
+    st.rerun()
 
 
 
