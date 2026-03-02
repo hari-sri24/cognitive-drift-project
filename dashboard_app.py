@@ -217,7 +217,129 @@ with charts_placeholder.container():
                 st.pyplot(fig)
                 plt.close()
 
-# ---------- DEMOGRAPHICS, ANOMALY, SPEEDOMETER ----------
-# (You can include your original code from first working version here)
+with tab3:
+                # Demographics
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Age Distribution")
+                        ages = [s['Age'] for s in st.session_state.batch_samples]
+                        fig, ax = plt.subplots()
+                        ax.hist(ages, bins=10, edgecolor='white', alpha=0.7, color='lightgreen')
+                        ax.set_xlabel('Age', color='white')
+                        ax.set_ylabel('Count', color='white')
+                        ax.tick_params(colors='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+                
+                with col2:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Gender Distribution")
+                        genders = [s['Gender'] for s in st.session_state.batch_samples]
+                        gender_counts = pd.Series(genders).value_counts()
+                        
+                        fig, ax = plt.subplots()
+                        ax.pie(gender_counts.values, labels=gender_counts.index, autopct='%1.1f%%',
+                               colors=['#ff9999', '#66b3ff'], textprops={'color': 'white'})
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Stress Level Distribution")
+                        stress = [s['Stress_Level'] for s in st.session_state.batch_samples]
+                        fig, ax = plt.subplots()
+                        ax.hist(stress, bins=10, edgecolor='white', alpha=0.7, color='salmon')
+                        ax.set_xlabel('Stress Level (1-10)', color='white')
+                        ax.set_ylabel('Count', color='white')
+                        ax.tick_params(colors='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+                
+                with col2:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Cognitive Score by Gender")
+                        df_gender = pd.DataFrame(st.session_state.batch_samples)
+                        gender_scores = df_gender.groupby('Gender')['Cognitive_Score'].mean()
+                        
+                        fig, ax = plt.subplots()
+                        ax.bar(gender_scores.index, gender_scores.values, color=['#ff9999', '#66b3ff'])
+                        ax.set_xlabel('Gender', color='white')
+                        ax.set_ylabel('Avg Cognitive Score', color='white')
+                        ax.tick_params(colors='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+            
+            with tab4:
+                # Advanced Analytics
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_speedometer and len(st.session_state.historical_data) > 0:
+                        st.subheader("Drift Risk Meter")
+                        recent_drift_rate = st.session_state.historical_data['drift_status'].tail(20).mean() * 100
+                        
+                        fig = go.Figure(go.Indicator(
+                            mode="gauge+number",
+                            value=recent_drift_rate,
+                            title={'text': "Drift Risk (%)", 'font': {'color': 'white'}},
+                            number={'font': {'color': 'white'}},
+                            gauge={
+                                'axis': {'range': [0, 100], 'tickcolor': 'white'},
+                                'bar': {'color': "darkblue"},
+                                'bgcolor': '#1E1E1E',
+                                'steps': [
+                                    {'range': [0, 30], 'color': "lightgreen"},
+                                    {'range': [30, 70], 'color': "yellow"},
+                                    {'range': [70, 100], 'color': "red"}
+                                ],
+                                'threshold': {
+                                    'line': {'color': "white", 'width': 4},
+                                    'thickness': 0.75,
+                                    'value': 95
+                                }
+                            }
+                        ))
+                        fig.update_layout(
+                            height=300,
+                            paper_bgcolor='#0E1117',
+                            font={'color': 'white'}
+                        )
+                        unique_key = f"speedometer_{st.session_state.counter}"
+                        st.plotly_chart(fig, use_container_width=True, key=unique_key)
+                
+                with col2:
+                    if show_anomaly and len(st.session_state.historical_data) > 20:
+                        st.subheader("Anomaly Detection")
+                        df_anomaly = st.session_state.historical_data.tail(50).copy()
+                        mean = df_anomaly['cognitive_score'].mean()
+                        std = df_anomaly['cognitive_score'].std()
+                        df_anomaly['anomaly'] = (abs(df_anomaly['cognitive_score'] - mean) > 2*std)
+                        
+                        fig, ax = plt.subplots()
+                        colors = df_anomaly['anomaly'].map({True: 'red', False: 'skyblue'})
+                        ax.scatter(range(len(df_anomaly)), df_anomaly['cognitive_score'], c=colors, alpha=0.6, s=50)
+                        ax.axhline(y=mean, color='green', linestyle='--', linewidth=2, label='Mean')
+                        ax.axhline(y=mean+2*std, color='orange', linestyle=':', linewidth=2, label='+2σ')
+                        ax.axhline(y=mean-2*std, color='orange', linestyle=':', linewidth=2, label='-2σ')
+                        ax.set_xlabel('Sample', color='white')
+                        ax.set_ylabel('Cognitive Score', color='white')
+                        ax.tick_params(colors='white')
+                        ax.legend(facecolor='#1E1E1E', labelcolor='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
 
 st.success("✅ Dashboard loaded successfully!")
+
