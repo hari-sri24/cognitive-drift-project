@@ -300,15 +300,21 @@ metrics_placeholder = st.empty()
 charts_placeholder = st.empty()
 stats_placeholder = st.empty()
 
-# Load data from your CSV 
+# Load CSV
 @st.cache_data
 def load_data(file_path):
     try:
-        data = pd.read_csv("human_cognitive_performance.csv")
-        return data
+        df = pd.read_csv("human_cognitive_performance.csv")
+        return df.to_dict(orient="list")  # converts DataFrame to dict like backend
     except Exception as e:
         st.error(f"Error loading CSV: {str(e)}")
         return None
+
+data = load_data("human_cognitive_performance.csv")
+
+if data is not None:
+    st.write("Data loaded successfully!")
+    st.dataframe(pd.DataFrame(data))  # optional display
 
 # Main loop
 while True:
@@ -644,6 +650,7 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
