@@ -195,16 +195,12 @@ if data is not None and not data.empty:
                 '<div class="drift-box drift-stable">✅ STABLE</div>',
                 unsafe_allow_html=True
             )
-     with col2:
-    # Keep only numeric values
-    numeric_values = [v for v in values if isinstance(v, (int, float, np.number))]
-
-    if len(numeric_values) > 1:
-        t_stat, p_value = stats.ttest_1samp(numeric_values, 70)
-    else:
-        p_value = 1.0
-
-    st.metric("p-value", f"{p_value:.4f}", delta="Significant" if p_value < 0.05 else "Not Significant")
+        with col2:
+            if len(values) > 1:
+                t_stat, p_value = stats.ttest_1samp(values, 70)
+            else:
+                p_value = 1.0
+            st.metric("p-value", f"{p_value:.4f}", delta="Significant" if p_value<0.05 else "Not Significant")
         with col3:
             st.metric(f"Avg {y_label}", f"{np.mean(values):.1f}")
         with col4:
@@ -215,6 +211,12 @@ if data is not None and not data.empty:
                 overall_drift_rate = (last_50>70).mean()
                 st.metric("Drift Rate (50 batches)", f"{overall_drift_rate:.1%}")
 
+# ------------------------
+# CHARTS, TABS, DEMOGRAPHICS, ANOMALY, SPEEDOMETER
+# ------------------------
+# Your original visualization, time series, statistical, demographic, anomaly, and speedometer code goes here
+# Make sure to use `st.session_state.historical_data` for plots and `values` for current batch
+# Use the same dark theme, colors, and metrics layout
 # Create charts container
         with charts_placeholder.container():
             st.markdown("## 📈 Visual Analytics")
@@ -466,6 +468,7 @@ if data is not None and not data.empty:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
