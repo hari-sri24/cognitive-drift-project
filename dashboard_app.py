@@ -254,16 +254,18 @@ if st.session_state.dataset_stats is None:
         "column_names": list(df.columns)
     }
     
-    if st.session_state.dataset_stats:
-        stats = st.session_state.dataset_stats
-        st.info(f"""
-        **Dataset Statistics:**
-       - Total Samples: {stats['total_rows']:,}
-        - Cognitive Score: {stats['cognitive_score_mean']:.1f} ± {stats['cognitive_score_std']:.1f}
-        - Age Range: {stats['age_mean']:.0f} years (avg)
-        - Stress Level: {stats['stress_level_mean']:.1f}/10
-        """)
-    
+    if st.session_state.dataset_stats is None:
+    df = pd.read_csv("human_cognitive_performance.csv")
+
+    st.session_state.dataset_stats = {
+        "total_rows": len(df),
+        "cognitive_score_mean": df["cognitive_score"].mean(),
+        "cognitive_score_std": df["cognitive_score"].std(),
+        "age_mean": df["age"].mean(),
+        "stress_level_mean": df["stress_level"].mean()
+    }
+
+stats = st.session_state.dataset_stats
     # Reset button
     if st.button("🔄 Reset Detector & Start Over", use_container_width=True):
         try:
@@ -645,6 +647,7 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
