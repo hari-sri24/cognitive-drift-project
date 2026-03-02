@@ -11,8 +11,6 @@ from sklearn.linear_model import LinearRegression
 from pandas.plotting import autocorrelation_plot
 
 # Configuration
-API_URL = "http://127.0.0.1:5000/api/data"
-STATS_URL = "http://127.0.0.1:5000/api/stats"
 REFRESH_RATE = 4
 
 # Page config
@@ -246,14 +244,26 @@ with st.sidebar:
     
     st.markdown('<div class="sidebar-section">ℹ️ Dataset Info</div>', unsafe_allow_html=True)
     
-    # Fetch dataset stats
-    if st.session_state.dataset_stats is None:
-        try:
-            response = requests.get(STATS_URL, timeout=120)
-            if response.status_code == 200:
-                st.session_state.dataset_stats = response.json()
-        except:
-            pass
+   if st.session_state.dataset_stats is None and data is not None:
+    df = pd.DataFrame(data)  # your CSV data
+    st.session_state.dataset_stats = {
+        "total_rows": len(df),
+        "cognitive_score_mean": df['cognitive_score'].mean(),
+        "cognitive_score_std": df['cognitive_score'].std(),
+        "age_mean": df['age'].mean() if 'age' in df.columns else 0,
+        "stress_level_mean": df['stress_level'].mean() if 'stress_level' in df.columns else 0
+    }
+
+# Display stats
+stats = st.session_state.dataset_stats
+st.info(f"""
+**Dataset Statistics:**
+- Total Samples: {stats['total_rows']:,}
+- Cognitive Score: {stats['cognitive_score_mean']:.1f} ± {stats['cognitive_score_std']:.1f}
+- Age Range: {stats['age_mean']:.0f} years (avg)
+- Stress Level: {stats['stress_level_mean']:.1f}/10
+""")
+
     
     if st.session_state.dataset_stats:
         stats = st.session_state.get("dataset_stats")
@@ -275,25 +285,6 @@ with st.sidebar:
         except:
             st.error("❌ Could not connect to backend")
 
-# Check if backend is running
-try:
-    response = requests.get("http://127.0.0.1:5000/", timeout=2)
-    if response.status_code == 200:
-        st.sidebar.success("✅ Backend Connected")
-    else:
-        st.sidebar.error("❌ Backend Error")
-        st.stop()
-except:
-    st.sidebar.error("""
-    ❌ **Cannot connect to backend!**
-    
-    Please start the Flask backend:
-    1. Open a new terminal
-    2. Run: `python backend_api.py`
-    3. Then refresh this page
-    """)
-    st.stop()
-
 # Create placeholders for dynamic content
 header_placeholder = st.empty()
 metrics_placeholder = st.empty()
@@ -301,92 +292,100 @@ charts_placeholder = st.empty()
 stats_placeholder = st.empty()
 
 # Load CSV
-@st.cache_data
-def load_data(file_path):
-    try:
-        df = pd.read_csv(file_path)
-        return df.to_dict(orient="list")  # mimic backend JSON
-    except Exception as e:
-        st.error(f"Error loading CSV: {str(e)}")
-        return None
-
 data = load_data("human_cognitive_performance.csv")
+df = pd.DataFrame(data) if data is not None else None
 
-if data is not None:
-    st.dataframe(pd.DataFrame(data)) 
-
-# Main loop
-while True:
-    data = fetch_data()
+# Update historical data with offline drift logic
+for i, sample in enumerate(data['sample_data']):
+    timestamp_i = timestamp + pd.Timedelta(seconds=i)
     
-    if data:
-        timestamp = datetime.now()
-        st.session_state.counter += 1
-        
-        # Extract values based on selected metric
-        if monitored_metric == "Cognitive Score":
-            values = data['data']
-            y_label = "Cognitive Score"
-            y_range = [0, 100]
-        elif monitored_metric == "Reaction Time":
-            # Extract reaction times from sample data
-            values = [s['Reaction_Time'] for s in data['sample_data']]
-            y_label = "Reaction Time (ms)"
-            y_range = [0, 1000]
-        else:  # Memory Test Score
-            values = [s['Memory_Test_Score'] for s in data['sample_data']]
-            y_label = "Memory Test Score"
-            y_range = [0, 100]
-        
-        # Update historical data
-        for i, (value, sample) in enumerate(zip(values, data['sample_data'])):
-            new_row = pd.DataFrame({
-                'timestamp': [timestamp + pd.Timedelta(seconds=i)],
-                'cognitive_score': [sample['Cognitive_Score']],
-                'reaction_time': [sample['Reaction_Time']],
-                'memory_score': [sample['Memory_Test_Score']],
-                'drift_status': [data['drift']],
-                'p_value': [data['p_value']],
-                'age': [sample['Age']],
-                'gender': [sample['Gender']],
-                'stress_level': [sample['Stress_Level']]
-            })
-            
-            if len(st.session_state.historical_data) > 0:
-                st.session_state.historical_data = pd.concat([st.session_state.historical_data, new_row], ignore_index=True)
-            else:
-                st.session_state.historical_data = new_row
-        
-        # Store batch samples for display
-        st.session_state.batch_samples = data['sample_data']
-        
-        # Keep only last 1000 records for performance
-        if len(st.session_state.historical_data) > 1000:
-            st.session_state.historical_data = st.session_state.historical_data.tail(1000)
-        
-        # Display status and batch info
-        header_placeholder.info(
-            f"🕐 Last updated: {timestamp.strftime('%H:%M:%S')} | "
-            f"📊 Processing batch {data['batch_info']['start_idx']}-{data['batch_info']['end_idx']} "
-            f"of {data['batch_info']['total_rows']:,}"
-        )
+    # Offline calculations
+    cognitive_score = sample['Cognitive_Score']
+    reaction_time = sample['Reaction_Time']
+    memory_score = sample['Memory_Test_Score']
+    
+    # Example offline drift detection: drift if cognitive_score > 70
+    drift_status = cognitive_score > 70
+    
+    # Example offline p-value (dummy): smaller if drift detected
+    p_value = 0.01 if drift_status else 0.5
+    
+    new_row = pd.DataFrame({
+        'timestamp': [timestamp_i],
+        'cognitive_score': [cognitive_score],
+        'reaction_time': [reaction_time],
+        'memory_score': [memory_score],
+        'drift_status': [drift_status],
+        'p_value': [p_value],
+        'age': [sample['Age']],
+        'gender': [sample['Gender']],
+        'stress_level': [sample['Stress_Level']]
+    })
+
+    st.session_state.historical_data = pd.concat(
+        [st.session_state.historical_data, new_row], ignore_index=True
+    )
+    
+# Main loop
+    if df is not None and not df.empty:
+    timestamp = datetime.now()
+    st.session_state.counter += 1
+
+    # Select values based on monitored_metric
+    if monitored_metric == "Cognitive Score":
+        values = df['cognitive_score'].tolist()
+        y_label = "Cognitive Score"
+        y_range = [0, 100]
+    elif monitored_metric == "Reaction Time":
+        values = df['reaction_time'].tolist()
+        y_label = "Reaction Time (ms)"
+        y_range = [0, 1000]
+    else:  # Memory Test Score
+        values = df['memory_score'].tolist()
+        y_label = "Memory Test Score"
+        y_range = [0, 100]
+
+    # Update historical_data
+    new_rows = df.copy()
+    new_rows['timestamp'] = pd.to_datetime(timestamp)
+    st.session_state.historical_data = pd.concat([st.session_state.historical_data, new_rows], ignore_index=True)
+    
+    # Keep only last 1000 records for performance
+    if len(st.session_state.historical_data) > 1000:
+        st.session_state.historical_data = st.session_state.historical_data.tail(1000)
+
+    # Batch samples for display (entire CSV)
+    st.session_state.batch_samples = df.to_dict(orient='records')
+    
         
         # Display metrics
         with metrics_placeholder.container():
             st.markdown("## 📊 Current Metrics")
             col1, col2, col3, col4, col5 = st.columns(5)
             
-            # Drift status
-            with col1:
-                if data['drift']:
-                    st.markdown('<div class="drift-box drift-detected">⚠️ DRIFT DETECTED</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="drift-box drift-stable">✅ STABLE</div>', unsafe_allow_html=True)
+           # Drift status (offline/dummy calculation)
+with col1:
+    # Example: drift if mean cognitive score > 70
+    drift_detected = np.mean(values) > 70  
+    st.markdown(
+        '<div class="drift-box drift-detected">⚠️ DRIFT DETECTED</div>' 
+        if drift_detected else 
+        '<div class="drift-box drift-stable">✅ STABLE</div>',
+        unsafe_allow_html=True
+    )
             
             with col2:
-                st.metric("p-value", f"{data['p_value']:.4f}", 
-                         delta="Significant" if data['p_value'] < 0.05 else "Not Significant")
-            
+                   # Example: simple p-value using one-sample t-test vs threshold 70
+    from scipy import stats
+    if len(values) > 1:
+        t_stat, p_value = stats.ttest_1samp(values, 70)
+    else:
+        p_value = 1.0  # default if not enough data
+    
+    st.metric(
+        "p-value", f"{p_value:.4f}", 
+        delta="Significant" if p_value < 0.05 else "Not Significant"
+    )
             with col3:
                 st.metric(f"Avg {y_label}", f"{np.mean(values):.1f}")
             
@@ -394,9 +393,13 @@ while True:
                 st.metric("Batch Size", len(values))
             
             with col5:
-                if len(st.session_state.historical_data) > 0:
-                    overall_drift_rate = st.session_state.historical_data['drift_status'].tail(50).mean()
-                    st.metric("Drift Rate (50 batches)", f"{overall_drift_rate:.1%}")
+                with col5:
+    if len(st.session_state.historical_data) > 0:
+        # Use last 50 batches
+        last_50 = st.session_state.historical_data['cognitive_score'].tail(50)
+        drift_flags = last_50 > 70  # same threshold as before
+        overall_drift_rate = drift_flags.mean()
+        st.metric("Drift Rate (50 batches)", f"{overall_drift_rate:.1%}")
         
         # Create charts container
         with charts_placeholder.container():
@@ -647,8 +650,8 @@ while True:
                     df_display = pd.DataFrame(st.session_state.batch_samples)
                     st.dataframe(df_display, use_container_width=True)
     
-    time.sleep(refresh_rate)
-    st.rerun()
+    
+
 
 
 
