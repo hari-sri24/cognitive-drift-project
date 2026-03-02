@@ -258,7 +258,7 @@ if st.session_state.dataset_stats is None:
         stats = st.session_state.dataset_stats
         st.info(f"""
         **Dataset Statistics:**
-        - Total Samples: {stats['total_samples']:,}
+       - Total Samples: {stats['total_rows']:,}
         - Cognitive Score: {stats['cognitive_score_mean']:.1f} ± {stats['cognitive_score_std']:.1f}
         - Age Range: {stats['age_mean']:.0f} years (avg)
         - Stress Level: {stats['stress_level_mean']:.1f}/10
@@ -645,6 +645,7 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
