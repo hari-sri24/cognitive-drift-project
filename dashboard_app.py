@@ -1,5 +1,4 @@
 import streamlit as st
-import requests
 import pandas as pd
 import numpy as np
 import time
@@ -11,8 +10,6 @@ from sklearn.linear_model import LinearRegression
 from pandas.plotting import autocorrelation_plot
 
 # Configuration
-API_URL = "http://127.0.0.1:5000/api/data"
-STATS_URL = "http://127.0.0.1:5000/api/stats"
 REFRESH_RATE = 4
 
 # Page config
@@ -246,14 +243,16 @@ with st.sidebar:
     
     st.markdown('<div class="sidebar-section">ℹ️ Dataset Info</div>', unsafe_allow_html=True)
     
-    # Fetch dataset stats
-    if st.session_state.dataset_stats is None:
-        try:
-            response = requests.get(STATS_URL, timeout=120)
-            if response.status_code == 200:
-                st.session_state.dataset_stats = response.json()
-        except:
-            pass
+    
+   # Load dataset directly
+if st.session_state.dataset_stats is None:
+    df = pd.read_csv("data.csv")   # or your correct CSV file name
+    
+    st.session_state.dataset_stats = {
+        "total_rows": len(df),
+        "total_columns": len(df.columns),
+        "column_names": list(df.columns)
+    }
     
     if st.session_state.dataset_stats:
         stats = st.session_state.dataset_stats
@@ -646,6 +645,7 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
