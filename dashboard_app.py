@@ -244,9 +244,9 @@ with st.sidebar:
     st.markdown('<div class="sidebar-section">ℹ️ Dataset Info</div>', unsafe_allow_html=True)
     
     
-   # Load dataset directly
+ # Load dataset directly
 if st.session_state.dataset_stats is None:
-    df = pd.read_csv("data.csv")   # or your correct CSV file name
+    df = pd.read_csv("human_cognitive_performance.csv")
     
     st.session_state.dataset_stats = {
         "total_rows": len(df),
@@ -645,6 +645,7 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
