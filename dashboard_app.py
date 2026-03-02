@@ -196,17 +196,17 @@ if data is not None and not data.empty:
                 unsafe_allow_html=True
             )
       with col2:
-    # Check if values exist and are numeric
+   with col2:
+    # Filter numeric values only
     numeric_values = [v for v in values if isinstance(v, (int, float, np.number))]
-    
+
     if len(numeric_values) > 0:
         t_stat, p_value = stats.ttest_1samp(numeric_values, 70)
-        # If t_stat or p_value is nan, set p_value to 1
         if np.isnan(p_value):
             p_value = 1.0
     else:
-        p_value = 1.0  # Default if no valid numeric values
-    
+        p_value = 1.0  # Default if no numeric values
+
     st.metric(
         "p-value",
         f"{p_value:.4f}",
@@ -473,4 +473,5 @@ if data is not None and not data.empty:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
