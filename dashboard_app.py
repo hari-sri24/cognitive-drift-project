@@ -195,12 +195,23 @@ if data is not None and not data.empty:
                 '<div class="drift-box drift-stable">✅ STABLE</div>',
                 unsafe_allow_html=True
             )
-        with col2:
-            if len(values) > 1:
-                t_stat, p_value = stats.ttest_1samp(values, 70)
-            else:
-                p_value = 1.0
-            st.metric("p-value", f"{p_value:.4f}", delta="Significant" if p_value<0.05 else "Not Significant")
+      with col2:
+    # Check if values exist and are numeric
+    numeric_values = [v for v in values if isinstance(v, (int, float, np.number))]
+    
+    if len(numeric_values) > 0:
+        t_stat, p_value = stats.ttest_1samp(numeric_values, 70)
+        # If t_stat or p_value is nan, set p_value to 1
+        if np.isnan(p_value):
+            p_value = 1.0
+    else:
+        p_value = 1.0  # Default if no valid numeric values
+    
+    st.metric(
+        "p-value",
+        f"{p_value:.4f}",
+        delta="Significant" if p_value < 0.05 else "Not Significant"
+    )
         with col3:
             st.metric(f"Avg {y_label}", f"{np.mean(values):.1f}")
         with col4:
@@ -462,3 +473,4 @@ if data is not None and not data.empty:
     
     time.sleep(refresh_rate)
     st.rerun()
+
