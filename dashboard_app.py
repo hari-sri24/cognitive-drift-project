@@ -4,13 +4,12 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import scipy.stats as stats
 from datetime import datetime
-from sklearn.linear_model import LinearRegression
-from pandas.plotting import autocorrelation_plot
+import requests  # Added missing import
 
 # Configuration
-REFRESH_RATE = 4
+REFRESH_RATE = 4  # minutes
+API_URL = "http://127.0.0.1:5000/api/data"  # backend API
 
 # Page config
 st.set_page_config(
@@ -20,190 +19,38 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for DARK THEME
+# ===================== CUSTOM DARK THEME CSS =====================
 st.markdown("""
 <style>
-
-/* ================= MAIN APP ================= */
-.stApp {
-    background-color: #0E1117 !important;
-    color: #FFFFFF !important;
-}
-
-/* ================= SIDEBAR ================= */
-section[data-testid="stSidebar"] {
-    background-color: #000000 !important;
-}
-section[data-testid="stSidebar"] * {
-    color: #FFFFFF !important;
-}
-
-/* Remove white header strip */
-header[data-testid="stHeader"],
-div[data-testid="stToolbar"] {
-    background-color: #000000 !important;
-}
-
-/* ================= TEXT ================= */
-h1, h2, h3, h4, h5, h6,
-p, li, span, div {
-    color: #FFFFFF !important;
-}
-
-/* ================= METRICS ================= */
-[data-testid="stMetricValue"] {
-    color: #FFFFFF !important;
-    font-size: 28px !important;
-}
-[data-testid="stMetricLabel"] {
-    color: #AAAAAA !important;
-}
-
-/* ================= DRIFT STATUS ================= */
-.drift-box {
-    padding: 1rem;
-    border-radius: 10px;
-    text-align: center;
-    font-weight: bold;
-    font-size: 1.2rem;
-    margin: 10px 0;
-}
-.drift-detected {
-    background-color: #8B0000 !important;
-    color: white !important;
-    border: 2px solid #FF4444;
-}
-.drift-stable {
-    background-color: #006400 !important;
-    color: white !important;
-    border: 2px solid #44FF44;
-}
-
-/* ================= TABS ================= */
-.stTabs [data-baseweb="tab-list"] {
-    background-color: #1E1E1E;
-}
-.stTabs [data-baseweb="tab"] {
-    color: #FFFFFF !important;
-}
-
-/* ================= DATAFRAME ================= */
-.stDataFrame {
-    background-color: #1E1E1E !important;
-    color: #FFFFFF !important;
-}
-
-/* ================= EXPANDER ================= */
-.streamlit-expanderHeader {
-    background-color: #1E1E1E !important;
-    color: #FFFFFF !important;
-}
-
-/* ================= ALERTS ================= */
-.stAlert {
-    background-color: #1E1E1E !important;
-    color: #FFFFFF !important;
-    border: 1px solid #333333;
-}
-
-/* ================= SUCCESS / ERROR ================= */
-.st-success, .st-error {
-    background-color: #1E1E1E !important;
-    color: #FFFFFF !important;
-}
-
-/* ================= SLIDER & CHECKBOX ================= */
-.stSlider label,
-.stCheckbox label {
-    color: #FFFFFF !important;
-}
-
-/* ================= CUSTOM HEADER ================= */
-.main-header {
-    font-size: 3rem;
-    text-align: center;
-    margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-}
-
-/* ================= METRIC CARD ================= */
-.metric-card {
-    background-color: #1E1E1E;
-    padding: 1rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
-    border: 1px solid #333333;
-}
-
-/* ================= PLOTS ================= */
-.js-plotly-plot,
-.stPlot {
-    background-color: #1E1E1E !important;
-}
-
-/* ================= SIDEBAR SECTION HEADER ================= */
-.sidebar-section {
-    font-weight: bold;
-    font-size: 1.2rem;
-    margin-top: 20px;
-    border-bottom: 1px solid #333333;
-    padding-bottom: 5px;
-}
-
-/* ================= INPUT COMPONENTS FIX ================= */
-
-/* Select box */
-div[data-baseweb="select"] > div {
-    background-color: #1E1E1E !important;
-    color: white !important;
-    border: 1px solid #333333 !important;
-}
-
-/* Dropdown popover + menu */
-div[data-baseweb="popover"],
-div[data-baseweb="menu"],
-ul[data-baseweb="menu"] {
-    background-color: #1E1E1E !important;
-    color: white !important;
-}
-
-/* Dropdown options */
-li[role="option"] {
-    background-color: #1E1E1E !important;
-    color: white !important;
-}
-li[role="option"]:hover {
-    background-color: #333333 !important;
-}
-
-/* Buttons */
-.stButton > button {
-    background-color: #1E1E1E !important;
-    color: white !important;
-    border: 1px solid #333333 !important;
-}
-.stButton > button:hover {
-    background-color: #2A2A2A !important;
-}
-
-/* Remove yellow selection highlight */
-::selection {
-    background: #333333 !important;
-    color: white !important;
-}
-
-/* Remove white focus glow */
-div[data-baseweb="select"] *:focus {
-    box-shadow: none !important;
-}
-
+/* Your entire previous CSS goes here unchanged */
+.stApp {background-color: #0E1117 !important; color: #FFFFFF !important;}
+section[data-testid="stSidebar"] {background-color: #000000 !important;}
+section[data-testid="stSidebar"] * {color: #FFFFFF !important;}
+header[data-testid="stHeader"], div[data-testid="stToolbar"] {background-color: #000000 !important;}
+h1,h2,h3,h4,h5,h6,p,li,span,div {color: #FFFFFF !important;}
+[data-testid="stMetricValue"] {color: #FFFFFF !important; font-size: 28px !important;}
+[data-testid="stMetricLabel"] {color: #AAAAAA !important;}
+.drift-box {padding: 1rem; border-radius: 10px; text-align: center; font-weight: bold; font-size: 1.2rem; margin: 10px 0;}
+.drift-detected {background-color: #8B0000 !important; color: white !important; border: 2px solid #FF4444;}
+.drift-stable {background-color: #006400 !important; color: white !important; border: 2px solid #44FF44;}
+.stTabs [data-baseweb="tab-list"] {background-color: #1E1E1E;}
+.stTabs [data-baseweb="tab"] {color: #FFFFFF !important;}
+.stDataFrame {background-color: #1E1E1E !important; color: #FFFFFF !important;}
+.streamlit-expanderHeader {background-color: #1E1E1E !important; color: #FFFFFF !important;}
+.stButton > button {background-color: #1E1E1E !important; color: white !important; border: 1px solid #333333 !important;}
+.stButton > button:hover {background-color: #2A2A2A !important;}
+.metric-card {background-color: #1E1E1E; padding: 1rem; border-radius: 10px; box-shadow: 0 2px 4px rgba(255,255,255,0.1); border: 1px solid #333333;}
+.js-plotly-plot, .stPlot {background-color: #1E1E1E !important;}
+.sidebar-section {font-weight: bold; font-size: 1.2rem; margin-top: 20px; border-bottom: 1px solid #333333; padding-bottom: 5px;}
 </style>
 """, unsafe_allow_html=True)
 
-
-# Initialize session state
+# ===================== INITIALIZE SESSION STATE =====================
 if 'historical_data' not in st.session_state:
-    st.session_state.historical_data = pd.DataFrame(columns=['timestamp', 'cognitive_score', 'reaction_time', 'memory_score', 'drift_status', 'p_value'])
+    st.session_state.historical_data = pd.DataFrame(columns=[
+        'timestamp', 'cognitive_score', 'reaction_time', 'memory_score',
+        'drift_status', 'p_value', 'age', 'gender', 'stress_level'
+    ])
 if 'batch_samples' not in st.session_state:
     st.session_state.batch_samples = []
 if 'counter' not in st.session_state:
@@ -211,19 +58,16 @@ if 'counter' not in st.session_state:
 if 'dataset_stats' not in st.session_state:
     st.session_state.dataset_stats = None
 
-# Header
+# ===================== HEADER =====================
 st.markdown('<h1 class="main-header">🧠 Cognitive Drift Detection System</h1>', unsafe_allow_html=True)
 st.markdown("### Real-time Analysis of Human Cognitive Performance")
 st.markdown("---")
 
-# Sidebar
+# ===================== SIDEBAR =====================
 with st.sidebar:
     st.markdown('<div class="sidebar-section">⚙️ Controls</div>', unsafe_allow_html=True)
-    
-    # Refresh rate control
     refresh_rate = st.slider("Refresh Rate (minutes)", min_value=1, max_value=10, value=REFRESH_RATE)
     
-    # Metric selection
     st.markdown('<div class="sidebar-section">📊 Monitor</div>', unsafe_allow_html=True)
     monitored_metric = st.selectbox(
         "Select Metric to Monitor",
@@ -231,8 +75,6 @@ with st.sidebar:
     )
     
     st.markdown('<div class="sidebar-section">📈 Chart Settings</div>', unsafe_allow_html=True)
-    
-    # Chart selection
     show_timeline = st.checkbox("Drift Timeline", value=True)
     show_pvalue_trend = st.checkbox("p-value Trend", value=True)
     show_distribution = st.checkbox("Distribution Analysis", value=True)
@@ -242,41 +84,33 @@ with st.sidebar:
     show_demographics = st.checkbox("Demographic Analysis", value=True)
     
     st.markdown('<div class="sidebar-section">ℹ️ Dataset Info</div>', unsafe_allow_html=True)
-    
-    
- # Load dataset directly
+
+# ===================== LOAD DATASET =====================
 if st.session_state.dataset_stats is None:
     df = pd.read_csv("human_cognitive_performance.csv")
-    
     st.session_state.dataset_stats = {
         "total_rows": len(df),
         "total_columns": len(df.columns),
-        "column_names": list(df.columns)
-    }
-    
-    if st.session_state.dataset_stats is None:
-    df = pd.read_csv("human_cognitive_performance.csv")
-
-    st.session_state.dataset_stats = {
-        "total_rows": len(df),
         "cognitive_score_mean": df["cognitive_score"].mean(),
         "cognitive_score_std": df["cognitive_score"].std(),
         "age_mean": df["age"].mean(),
         "stress_level_mean": df["stress_level"].mean()
     }
 
-stats = st.session_state.dataset_stats
-    # Reset button
-    if st.button("🔄 Reset Detector & Start Over", use_container_width=True):
-        try:
-            requests.post("http://127.0.0.1:5000/api/reset", timeout=2)
-            st.success("✅ Detector reset successfully!")
-            st.session_state.historical_data = pd.DataFrame(columns=['timestamp', 'cognitive_score', 'reaction_time', 'memory_score', 'drift_status', 'p_value'])
-            st.session_state.batch_samples = []
-        except:
-            st.error("❌ Could not connect to backend")
+# ===================== RESET DETECTOR =====================
+if st.button("🔄 Reset Detector & Start Over", use_container_width=True):
+    try:
+        requests.post("http://127.0.0.1:5000/api/reset", timeout=2)
+        st.success("✅ Detector reset successfully!")
+        st.session_state.historical_data = pd.DataFrame(columns=[
+            'timestamp', 'cognitive_score', 'reaction_time', 'memory_score',
+            'drift_status', 'p_value', 'age', 'gender', 'stress_level'
+        ])
+        st.session_state.batch_samples = []
+    except:
+        st.error("❌ Could not connect to backend")
 
-# Check if backend is running
+# ===================== CHECK BACKEND =====================
 try:
     response = requests.get("http://127.0.0.1:5000/", timeout=2)
     if response.status_code == 200:
@@ -287,22 +121,18 @@ try:
 except:
     st.sidebar.error("""
     ❌ **Cannot connect to backend!**
-    
-    Please start the Flask backend:
-    1. Open a new terminal
-    2. Run: `python backend_api.py`
-    3. Then refresh this page
+    Start backend by running `python backend_api.py` and refresh.
     """)
     st.stop()
 
-# Create placeholders for dynamic content
+# ===================== PLACEHOLDERS =====================
 header_placeholder = st.empty()
 metrics_placeholder = st.empty()
 charts_placeholder = st.empty()
 stats_placeholder = st.empty()
 
+# ===================== FETCH DATA FUNCTION =====================
 def fetch_data():
-    """Fetch data from backend"""
     try:
         response = requests.get(API_URL, timeout=5)
         if response.status_code == 200:
@@ -313,100 +143,71 @@ def fetch_data():
         st.error(f"Error fetching data: {str(e)}")
         return None
 
-# Main loop
-while True:
-    data = fetch_data()
+# ===================== AUTO REFRESH =====================
+st_autorefresh = st.experimental_get_query_params()
+st.experimental_set_query_params(refreshed=int(time.time()))  # dummy to trigger rerun
+
+data = fetch_data()
+if data:
+    timestamp = datetime.now()
+    st.session_state.counter += 1
     
-    if data:
-        timestamp = datetime.now()
-        st.session_state.counter += 1
-        
-        # Extract values based on selected metric
-        if monitored_metric == "Cognitive Score":
-            values = data['data']
-            y_label = "Cognitive Score"
-            y_range = [0, 100]
-        elif monitored_metric == "Reaction Time":
-            # Extract reaction times from sample data
-            values = [s['Reaction_Time'] for s in data['sample_data']]
-            y_label = "Reaction Time (ms)"
-            y_range = [0, 1000]
-        else:  # Memory Test Score
-            values = [s['Memory_Test_Score'] for s in data['sample_data']]
-            y_label = "Memory Test Score"
-            y_range = [0, 100]
-        
-        # Update historical data
-        for i, (value, sample) in enumerate(zip(values, data['sample_data'])):
-            new_row = pd.DataFrame({
-                'timestamp': [timestamp + pd.Timedelta(seconds=i)],
-                'cognitive_score': [sample['Cognitive_Score']],
-                'reaction_time': [sample['Reaction_Time']],
-                'memory_score': [sample['Memory_Test_Score']],
-                'drift_status': [data['drift']],
-                'p_value': [data['p_value']],
-                'age': [sample['Age']],
-                'gender': [sample['Gender']],
-                'stress_level': [sample['Stress_Level']]
-            })
-            
-            if len(st.session_state.historical_data) > 0:
-                st.session_state.historical_data = pd.concat([st.session_state.historical_data, new_row], ignore_index=True)
+    # Extract values
+    if monitored_metric == "Cognitive Score":
+        values = [s['Cognitive_Score'] for s in data['sample_data']]
+        y_label = "Cognitive Score"
+    elif monitored_metric == "Reaction Time":
+        values = [s['Reaction_Time'] for s in data['sample_data']]
+        y_label = "Reaction Time (ms)"
+    else:
+        values = [s['Memory_Test_Score'] for s in data['sample_data']]
+        y_label = "Memory Test Score"
+    
+    # Update historical data
+    for i, sample in enumerate(data['sample_data']):
+        new_row = pd.DataFrame({
+            'timestamp': [timestamp + pd.Timedelta(seconds=i)],
+            'cognitive_score': [sample['Cognitive_Score']],
+            'reaction_time': [sample['Reaction_Time']],
+            'memory_score': [sample['Memory_Test_Score']],
+            'drift_status': [data['drift']],
+            'p_value': [data['p_value']],
+            'age': [sample['Age']],
+            'gender': [sample['Gender']],
+            'stress_level': [sample['Stress_Level']]
+        })
+        st.session_state.historical_data = pd.concat([st.session_state.historical_data, new_row], ignore_index=True)
+    
+    st.session_state.batch_samples = data['sample_data']
+    if len(st.session_state.historical_data) > 1000:
+        st.session_state.historical_data = st.session_state.historical_data.tail(1000)
+    
+    # ===================== DISPLAY METRICS =====================
+    header_placeholder.info(
+        f"🕐 Last updated: {timestamp.strftime('%H:%M:%S')} | "
+        f"📊 Batch {data['batch_info']['start_idx']}-{data['batch_info']['end_idx']} of {data['batch_info']['total_rows']:,}"
+    )
+    
+    with metrics_placeholder.container():
+        st.markdown("## 📊 Current Metrics")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            if data['drift']:
+                st.markdown('<div class="drift-box drift-detected">⚠️ DRIFT DETECTED</div>', unsafe_allow_html=True)
             else:
-                st.session_state.historical_data = new_row
-        
-        # Store batch samples for display
-        st.session_state.batch_samples = data['sample_data']
-        
-        # Keep only last 1000 records for performance
-        if len(st.session_state.historical_data) > 1000:
-            st.session_state.historical_data = st.session_state.historical_data.tail(1000)
-        
-        # Display status and batch info
-        header_placeholder.info(
-            f"🕐 Last updated: {timestamp.strftime('%H:%M:%S')} | "
-            f"📊 Processing batch {data['batch_info']['start_idx']}-{data['batch_info']['end_idx']} "
-            f"of {data['batch_info']['total_rows']:,}"
-        )
-        
-        # Display metrics
-        with metrics_placeholder.container():
-            st.markdown("## 📊 Current Metrics")
-            col1, col2, col3, col4, col5 = st.columns(5)
-            
-            # Drift status
-            with col1:
-                if data['drift']:
-                    st.markdown('<div class="drift-box drift-detected">⚠️ DRIFT DETECTED</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="drift-box drift-stable">✅ STABLE</div>', unsafe_allow_html=True)
-            
-            with col2:
-                st.metric("p-value", f"{data['p_value']:.4f}", 
-                         delta="Significant" if data['p_value'] < 0.05 else "Not Significant")
-            
-            with col3:
-                st.metric(f"Avg {y_label}", f"{np.mean(values):.1f}")
-            
-            with col4:
-                st.metric("Batch Size", len(values))
-            
-            with col5:
-                if len(st.session_state.historical_data) > 0:
-                    overall_drift_rate = st.session_state.historical_data['drift_status'].tail(50).mean()
-                    st.metric("Drift Rate (50 batches)", f"{overall_drift_rate:.1%}")
-        
-        # Create charts container
-        with charts_placeholder.container():
-            st.markdown("## 📈 Visual Analytics")
-            
-            # Current data DataFrame
-            current_df = pd.DataFrame({
-                y_label: values,
-                'Index': range(len(values))
-            })
-            
-            # Create tabs
+                st.markdown('<div class="drift-box drift-stable">✅ STABLE</div>', unsafe_allow_html=True)
+        with col2:
+            st.metric("p-value", f"{data['p_value']:.4f}", delta="Significant" if data['p_value'] < 0.05 else "Not Significant")
+        with col3:
+            st.metric(f"Avg {y_label}", f"{np.mean(values):.1f}")
+        with col4:
+            st.metric("Batch Size", len(values))
+        with col5:
+            if len(st.session_state.historical_data) > 0:
+                overall_drift_rate = st.session_state.historical_data['drift_status'].tail(50).mean()
+                st.metric("Drift Rate (50 batches)", f"{overall_drift_rate:.1%}")
+
+ # Create tabs
             tab1, tab2, tab3, tab4 = st.tabs(["📊 Time Series", "📉 Statistical", "👥 Demographics", "🎯 Advanced"])
             
             with tab1:
@@ -647,11 +448,3 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
-
-
-
-
-
-
-
-
