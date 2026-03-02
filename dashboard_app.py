@@ -211,9 +211,284 @@ if data is not None and not data.empty:
                 overall_drift_rate = (last_50>70).mean()
                 st.metric("Drift Rate (50 batches)", f"{overall_drift_rate:.1%}")
 
-# ------------------------
-# CHARTS, TABS, DEMOGRAPHICS, ANOMALY, SPEEDOMETER
-# ------------------------
-# Your original visualization, time series, statistical, demographic, anomaly, and speedometer code goes here
-# Make sure to use `st.session_state.historical_data` for plots and `values` for current batch
-# Use the same dark theme, colors, and metrics layout
+ # Display metrics
+        with metrics_placeholder.container():
+            st.markdown("## 📊 Current Metrics")
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            # Drift status
+            with col1:
+                if data['drift']:
+                    st.markdown('<div class="drift-box drift-detected">⚠️ DRIFT DETECTED</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div class="drift-box drift-stable">✅ STABLE</div>', unsafe_allow_html=True)
+            
+            with col2:
+                st.metric("p-value", f"{data['p_value']:.4f}", 
+                         delta="Significant" if data['p_value'] < 0.05 else "Not Significant")
+            
+            with col3:
+                st.metric(f"Avg {y_label}", f"{np.mean(values):.1f}")
+            
+            with col4:
+                st.metric("Batch Size", len(values))
+            
+            with col5:
+                if len(st.session_state.historical_data) > 0:
+                    overall_drift_rate = st.session_state.historical_data['drift_status'].tail(50).mean()
+                    st.metric("Drift Rate (50 batches)", f"{overall_drift_rate:.1%}")
+        
+        # Create charts container
+        with charts_placeholder.container():
+            st.markdown("## 📈 Visual Analytics")
+            
+            # Current data DataFrame
+            current_df = pd.DataFrame({
+                y_label: values,
+                'Index': range(len(values))
+            })
+            
+            # Create tabs
+            tab1, tab2, tab3, tab4 = st.tabs(["📊 Time Series", "📉 Statistical", "👥 Demographics", "🎯 Advanced"])
+            
+            with tab1:
+                # Time Series Charts
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_timeline:
+                        st.subheader("Drift Timeline")
+                        if len(st.session_state.historical_data) > 1:
+                            drift_history = st.session_state.historical_data[['timestamp', 'drift_status']].copy()
+                            drift_history['drift_value'] = drift_history['drift_status'].astype(int)
+                            st.line_chart(drift_history.set_index('timestamp')['drift_value'])
+                
+                with col2:
+                    if show_pvalue_trend:
+                        st.subheader("p-value Trend")
+                        if len(st.session_state.historical_data) > 1:
+                            pvalue_df = st.session_state.historical_data[['timestamp', 'p_value']].copy()
+                            st.line_chart(pvalue_df.set_index('timestamp'))
+                            st.caption("p-value < 0.05 indicates significant drift")
+                
+                # Main values chart
+                st.subheader(f"{y_label} Over Time")
+                st.line_chart(current_df.set_index('Index')[y_label])
+            
+            with tab2:
+                # Statistical Charts
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_distribution:
+                        st.subheader(f"{y_label} Distribution")
+                        fig, ax = plt.subplots()
+                        ax.hist(values, bins=15, edgecolor='white', alpha=0.7, color='skyblue')
+                        ax.axvline(np.mean(values), color='red', linestyle='--', linewidth=2, 
+                                  label=f'Mean: {np.mean(values):.1f}')
+                        ax.axvline(np.median(values), color='green', linestyle='--', linewidth=2, 
+                                  label=f'Median: {np.median(values):.1f}')
+                        ax.set_xlabel(y_label, color='white')
+                        ax.set_ylabel('Frequency', color='white')
+                        ax.tick_params(colors='white')
+                        ax.legend(facecolor='#1E1E1E', labelcolor='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+                
+                with col2:
+                    if show_correlations and len(st.session_state.historical_data) > 10:
+                        st.subheader("Feature Correlations")
+                        recent = st.session_state.historical_data.tail(100)
+                        corr_cols = ['cognitive_score', 'reaction_time', 'memory_score', 'age', 'stress_level']
+                        corr_matrix = recent[corr_cols].corr()
+                        
+                        fig, ax = plt.subplots()
+                        im = ax.imshow(corr_matrix, cmap='RdBu_r', vmin=-1, vmax=1)
+                        ax.set_xticks(range(len(corr_cols)))
+                        ax.set_yticks(range(len(corr_cols)))
+                        ax.set_xticklabels(corr_cols, rotation=45, ha='right', color='white')
+                        ax.set_yticklabels(corr_cols, color='white')
+                        
+                        # Add correlation values
+                        for i in range(len(corr_cols)):
+                            for j in range(len(corr_cols)):
+                                text = ax.text(j, i, f'{corr_matrix.iloc[i, j]:.2f}',
+                                              ha='center', va='center', color='white' if abs(corr_matrix.iloc[i, j]) < 0.5 else 'black')
+                        
+                        fig.patch.set_facecolor('#0E1117')
+                        ax.set_facecolor('#1E1E1E')
+                        plt.colorbar(im, ax=ax)
+                        st.pyplot(fig)
+                        plt.close()
+            
+            with tab3:
+                # Demographics
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Age Distribution")
+                        ages = [s['Age'] for s in st.session_state.batch_samples]
+                        fig, ax = plt.subplots()
+                        ax.hist(ages, bins=10, edgecolor='white', alpha=0.7, color='lightgreen')
+                        ax.set_xlabel('Age', color='white')
+                        ax.set_ylabel('Count', color='white')
+                        ax.tick_params(colors='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+                
+                with col2:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Gender Distribution")
+                        genders = [s['Gender'] for s in st.session_state.batch_samples]
+                        gender_counts = pd.Series(genders).value_counts()
+                        
+                        fig, ax = plt.subplots()
+                        ax.pie(gender_counts.values, labels=gender_counts.index, autopct='%1.1f%%',
+                               colors=['#ff9999', '#66b3ff'], textprops={'color': 'white'})
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Stress Level Distribution")
+                        stress = [s['Stress_Level'] for s in st.session_state.batch_samples]
+                        fig, ax = plt.subplots()
+                        ax.hist(stress, bins=10, edgecolor='white', alpha=0.7, color='salmon')
+                        ax.set_xlabel('Stress Level (1-10)', color='white')
+                        ax.set_ylabel('Count', color='white')
+                        ax.tick_params(colors='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+                
+                with col2:
+                    if show_demographics and len(st.session_state.batch_samples) > 0:
+                        st.subheader("Cognitive Score by Gender")
+                        df_gender = pd.DataFrame(st.session_state.batch_samples)
+                        gender_scores = df_gender.groupby('Gender')['Cognitive_Score'].mean()
+                        
+                        fig, ax = plt.subplots()
+                        ax.bar(gender_scores.index, gender_scores.values, color=['#ff9999', '#66b3ff'])
+                        ax.set_xlabel('Gender', color='white')
+                        ax.set_ylabel('Avg Cognitive Score', color='white')
+                        ax.tick_params(colors='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+            
+            with tab4:
+                # Advanced Analytics
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if show_speedometer and len(st.session_state.historical_data) > 0:
+                        st.subheader("Drift Risk Meter")
+                        recent_drift_rate = st.session_state.historical_data['drift_status'].tail(20).mean() * 100
+                        
+                        fig = go.Figure(go.Indicator(
+                            mode="gauge+number",
+                            value=recent_drift_rate,
+                            title={'text': "Drift Risk (%)", 'font': {'color': 'white'}},
+                            number={'font': {'color': 'white'}},
+                            gauge={
+                                'axis': {'range': [0, 100], 'tickcolor': 'white'},
+                                'bar': {'color': "darkblue"},
+                                'bgcolor': '#1E1E1E',
+                                'steps': [
+                                    {'range': [0, 30], 'color': "lightgreen"},
+                                    {'range': [30, 70], 'color': "yellow"},
+                                    {'range': [70, 100], 'color': "red"}
+                                ],
+                                'threshold': {
+                                    'line': {'color': "white", 'width': 4},
+                                    'thickness': 0.75,
+                                    'value': 95
+                                }
+                            }
+                        ))
+                        fig.update_layout(
+                            height=300,
+                            paper_bgcolor='#0E1117',
+                            font={'color': 'white'}
+                        )
+                        unique_key = f"speedometer_{st.session_state.counter}"
+                        st.plotly_chart(fig, use_container_width=True, key=unique_key)
+                
+                with col2:
+                    if show_anomaly and len(st.session_state.historical_data) > 20:
+                        st.subheader("Anomaly Detection")
+                        df_anomaly = st.session_state.historical_data.tail(50).copy()
+                        mean = df_anomaly['cognitive_score'].mean()
+                        std = df_anomaly['cognitive_score'].std()
+                        df_anomaly['anomaly'] = (abs(df_anomaly['cognitive_score'] - mean) > 2*std)
+                        
+                        fig, ax = plt.subplots()
+                        colors = df_anomaly['anomaly'].map({True: 'red', False: 'skyblue'})
+                        ax.scatter(range(len(df_anomaly)), df_anomaly['cognitive_score'], c=colors, alpha=0.6, s=50)
+                        ax.axhline(y=mean, color='green', linestyle='--', linewidth=2, label='Mean')
+                        ax.axhline(y=mean+2*std, color='orange', linestyle=':', linewidth=2, label='+2σ')
+                        ax.axhline(y=mean-2*std, color='orange', linestyle=':', linewidth=2, label='-2σ')
+                        ax.set_xlabel('Sample', color='white')
+                        ax.set_ylabel('Cognitive Score', color='white')
+                        ax.tick_params(colors='white')
+                        ax.legend(facecolor='#1E1E1E', labelcolor='white')
+                        ax.set_facecolor('#1E1E1E')
+                        fig.patch.set_facecolor('#0E1117')
+                        st.pyplot(fig)
+                        plt.close()
+        
+        # Statistics and Raw Data
+        with stats_placeholder.container():
+            st.markdown("---")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("📊 Current Batch Statistics")
+                stats_df = pd.DataFrame({
+                    'Metric': ['Mean', 'Std Dev', 'Min', '25%', 'Median', '75%', 'Max'],
+                    'Value': [
+                        f"{np.mean(values):.2f}",
+                        f"{np.std(values):.2f}",
+                        f"{np.min(values):.2f}",
+                        f"{np.percentile(values, 25):.2f}",
+                        f"{np.median(values):.2f}",
+                        f"{np.percentile(values, 75):.2f}",
+                        f"{np.max(values):.2f}"
+                    ]
+                })
+                st.dataframe(stats_df, use_container_width=True, hide_index=True)
+            
+            with col2:
+                st.subheader("🕒 Recent History")
+                if len(st.session_state.historical_data) > 0:
+                    recent = st.session_state.historical_data.tail(10)[
+                        ['timestamp', 'cognitive_score', 'drift_status', 'p_value']
+                    ].copy()
+                    recent['timestamp'] = recent['timestamp'].dt.strftime('%H:%M:%S')
+                    recent['drift_status'] = recent['drift_status'].map({True: '⚠ Drift', False: '✅ Stable'})
+                    recent.columns = ['Time', 'Score', 'Status', 'p-value']
+                    recent['Score'] = recent['Score'].round(2)
+                    recent['p-value'] = recent['p-value'].round(4)
+                    st.dataframe(recent, use_container_width=True, hide_index=True)
+            
+            # Raw data expander
+            with st.expander("🔍 View Current Batch Data"):
+                if st.session_state.batch_samples:
+                    df_display = pd.DataFrame(st.session_state.batch_samples)
+                    st.dataframe(df_display, use_container_width=True)
+    
+    time.sleep(refresh_rate)
+    st.rerun()
+
+
+
