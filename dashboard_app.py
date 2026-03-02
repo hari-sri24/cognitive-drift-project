@@ -341,5 +341,50 @@ with tab3:
                         st.pyplot(fig)
                         plt.close()
 
+# --------------------------
+# STATISTICS AND RAW DATA
+# --------------------------
+with stats_placeholder.container():
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+
+    # Current batch statistics
+    with col1:
+        st.subheader("📊 Current Batch Statistics")
+        stats_df = pd.DataFrame({
+            'Metric': ['Mean', 'Std Dev', 'Min', '25%', 'Median', '75%', 'Max'],
+            'Value': [
+                f"{np.mean(values):.2f}",
+                f"{np.std(values):.2f}",
+                f"{np.min(values):.2f}",
+                f"{np.percentile(values, 25):.2f}",
+                f"{np.median(values):.2f}",
+                f"{np.percentile(values, 75):.2f}",
+                f"{np.max(values):.2f}"
+            ]
+        })
+        st.dataframe(stats_df, use_container_width=True, hide_index=True)
+
+    # Recent history
+    with col2:
+        st.subheader("🕒 Recent History")
+        if len(st.session_state.historical_data) > 0:
+            recent = st.session_state.historical_data.tail(10)[
+                ['timestamp','Cognitive_Score','drift_status','p_value']
+            ].copy()
+            recent['timestamp'] = recent['timestamp'].dt.strftime('%H:%M:%S')
+            recent['drift_status'] = recent['drift_status'].map({True:'⚠ Drift', False:'✅ Stable'})
+            recent.columns = ['Time','Score','Status','p-value']
+            recent['Score'] = recent['Score'].round(2)
+            recent['p-value'] = recent['p-value'].round(4)
+            st.dataframe(recent, use_container_width=True, hide_index=True)
+
+    # Raw data expander
+    with st.expander("🔍 View Current Batch Data"):
+        if st.session_state.batch_samples:
+            df_display = pd.DataFrame(st.session_state.batch_samples)
+            st.dataframe(df_display, use_container_width=True)
+            
 st.success("✅ Dashboard loaded successfully!")
+
 
