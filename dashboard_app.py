@@ -300,16 +300,14 @@ metrics_placeholder = st.empty()
 charts_placeholder = st.empty()
 stats_placeholder = st.empty()
 
-def fetch_data():
-    """Fetch data from backend"""
+# Load data from your CSV 
+@st.cache_data
+def load_data(file_path):
     try:
-        response = requests.get(API_URL, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
+        data = pd.read_csv("human_cognitive_performance.csv")
+        return data
     except Exception as e:
-        st.error(f"Error fetching data: {str(e)}")
+        st.error(f"Error loading CSV: {str(e)}")
         return None
 
 # Main loop
@@ -646,6 +644,7 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
