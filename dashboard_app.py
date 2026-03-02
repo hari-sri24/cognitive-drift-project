@@ -304,8 +304,8 @@ stats_placeholder = st.empty()
 @st.cache_data
 def load_data(file_path):
     try:
-        df = pd.read_csv("human_cognitive_performance.csv")
-        return df.to_dict(orient="list")  # converts DataFrame to dict like backend
+        df = pd.read_csv(file_path)
+        return df.to_dict(orient="list")  # mimic backend JSON
     except Exception as e:
         st.error(f"Error loading CSV: {str(e)}")
         return None
@@ -313,8 +313,7 @@ def load_data(file_path):
 data = load_data("human_cognitive_performance.csv")
 
 if data is not None:
-    st.write("Data loaded successfully!")
-    st.dataframe(pd.DataFrame(data))  # optional display
+    st.dataframe(pd.DataFrame(data)) 
 
 # Main loop
 while True:
@@ -650,6 +649,7 @@ while True:
     
     time.sleep(refresh_rate)
     st.rerun()
+
 
 
 
